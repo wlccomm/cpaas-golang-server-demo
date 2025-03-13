@@ -16,8 +16,10 @@ func main() {
 
 	// add first user
 	var user User
-	user.Username = "glownes@whitelabelcomm.com"
-	user.Password = "password123"
+	// user.Username = "glownes@whitelabelcomm.com"
+	// user.Password = "password123"
+	user.Username = "2@2"
+	user.Password = "2"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		fmt.Println("Failed to hash password")
@@ -28,7 +30,26 @@ func main() {
 	users = append(users, user)
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	// r.Use(cors.Default())
+	corsOrigin := "https://app.cpaasdemo.cpaaslabs.net" // + os.Getenv("REALM_HOSTED_DOMAIN_NAME")
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:5173", corsOrigin},
+		AllowMethods: []string{"PUT", "PATCH", "OPTIONS", "POST", "GET", "DELETE"},
+		AllowHeaders: []string{
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"X-CSRF-Token",
+			"Authorization",
+			"accept",
+			"origin",
+			"Cache-Control",
+			"X-Requested-With",
+		},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -140,7 +161,12 @@ func protected(c *gin.Context) {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
+		spew.Dump(c.Request.Header)
+		spew.Dump(c.Request.Cookies())
+
+		// tokenString := c.GetHeader("Authorization")
+		// _auth is the cookie set by react-auth-kit
+		tokenString, _ := c.Cookie("_auth")
 		if tokenString == "" {
 			fmt.Println("error: tokenString = ''")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
